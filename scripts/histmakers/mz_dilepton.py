@@ -279,6 +279,14 @@ all_axes = {
         2, -2.0, 2.0, underflow=False, overflow=False, name="nonTrigMuons_charge0"
     ),
     "ptll_resolution": hist.axis.Regular(1000, -1, 1, name="ptll_resolution"),
+    "etaPlus_pseudomass": hist.axis.Regular(40, -2.4, 2.4, name="etaPlus_pseudomass"),
+    "etaMinus_pseudomass": hist.axis.Regular(40, -2.4, 2.4, name="etaMinus_pseudomass"),
+    "phiPlus_pseudomass": hist.axis.Regular(20,-np.pi, np.pi, name="phiPlus_pseudomass"),
+    "phiMinus_pseudomass": hist.axis.Regular(20, -np.pi, np.pi, name="phiMinus_pseudomass"),
+    "pseudomassPlus": hist.axis.Regular(500, 60, 160, name="pseudomassPlus"),
+    "pseudomassMinus": hist.axis.Regular(500, 60, 160, name="pseudomassMinus"),
+    "ptMinus_reciprocal": hist.axis.Regular(500, 0, 0.05, name="ptMinus_reciprocal"),
+    "ptPlus_reciprocal": hist.axis.Regular(500, 0, 0.05, name="ptPlus_reciprocal"),
 }
 
 auxiliary_gen_axes = [
@@ -736,6 +744,15 @@ def build_graph(df, dataset):
     df = df.Define("absEtaPlus", "std::fabs(etaPlus)")
     df = df.Define("etaAbsEta", "absEtaMinus > absEtaPlus ? etaMinus : etaPlus")
 
+    df = df.Alias("etaMinus_pseudomass", "muonsMinus_eta0")
+    df = df.Alias("etaPlus_pseudomass", "muonsPlus_eta0")
+    df = df.Define("phiMinus_pseudomass", "muonsMinus_mom4.Phi()")
+    df = df.Define("phiPlus_pseudomass", "muonsPlus_mom4.Phi()")
+    df = df.Define("pseudomassMinus", "ll_mom4.M()*std::sqrt(ptMinus/ptPlus)")
+    df = df.Define("pseudomassPlus", "ll_mom4.M()*std::sqrt(ptPlus/ptMinus)")
+    df = df.Define("ptMinus_reciprocal", "1/ptMinus")
+    df = df.Define("ptPlus_reciprocal", "1/ptPlus")
+
     df = df.Define(
         "etaRegionRange",
         "(std::abs(muonsPlus_eta0) > 0.9) + (std::abs(muonsMinus_eta0) > 0.9)",
@@ -1040,6 +1057,11 @@ def build_graph(df, dataset):
             "etaMinus",
             "ptPlus",
             "ptMinus",
+            ["etaMinus_pseudomass", "phiMinus_pseudomass", "pseudomassMinus"],
+            ["etaPlus_pseudomass", "phiPlus_pseudomass", "pseudomassPlus"],
+            ["etaMinus_pseudomass", "phiMinus_pseudomass", "ptMinus_reciprocal"],
+            ["etaPlus_pseudomass", "phiPlus_pseudomass", "ptPlus_reciprocal"],
+
         ]:
             if isinstance(obs, str):
                 obs = [obs]
