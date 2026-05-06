@@ -1,4 +1,10 @@
+'''
+This script uses histograms that are made using:
+python scripts/histmakers/mz_dilepton.py -o output --axes etaAbsEta mll --postfix etaAbsEta_mll
+'''
+
 import os
+import argparse
 import h5py
 import numpy as np
 import scipy.stats as stats
@@ -6,7 +12,6 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 from tqdm import tqdm
 import hist
-from ipywidgets import interact
 
 from wremnants.utilities.io_tools import base_io
 from wremnants.postprocessing.datagroups.datagroups import Datagroups
@@ -18,8 +23,11 @@ from ROOT import RooFit, RooRealVar, RooArgList, RooFormulaVar
 from ROOT import kRed, kBlue, kGreen, kMagenta
 
 import random
-import string
 
+parser = argparse.ArgumentParser(description='Computes muon curvature biases using the LHCb pseudomass method. Needs pseudomass histograms for Z->mumu.')
+parser.add_argument('-i', '--input', type=str, help='Input file path', default="output/mz_dilepton_scetlib_dyturbo_CT18Z_N3p0LL_N2LO_Corr_etaAbsEta_mll_2016PostVFP.hdf5")
+parser.add_argument('-o', '--outdir', type=str, help='Output directory path', default="output/")
+parser.add_argument('--label', type=str, help='Result label', default="2016_postVFP")
 
 # Enable multi-threading
 ROOT.ROOT.EnableImplicitMT()
@@ -421,12 +429,20 @@ def compute_fit_arrays(hist_Mplus, hist_Mminus, hist_Pplus_rec, hist_Pminus_rec,
     else:
         return bias_arr_separate_fit, bias_error_arr_separate_fit, chi2_arr_separate_fit, curve_param_arr_separate_fit
 
-h5_path = "output/mz_dilepton_scetlib_dyturbo_CT18Z_N3p0LL_N2LO_Corr_mll_2016PostVFP_dilepton.hdf5"
-plot_paths_data       = ["output/muon_curvature_bias_data.png",
-                         "output/uncertainty_normalized_distribution_bias_data.png"]
-plot_paths_mc         = ["output/muon_curvature_bias_mc.png",
-                         "output/uncertainty_normalized_distribution_bias_mc.png"]
-plot_path_comparison = "output/muon_curvature_bias_comparison.png"
+args = parser.parse_args()
+
+h5_path = args.input
+out_dir_path = args.outdir
+result_label = args.label
+
+if not os.path.exists(out_dir_path):
+    os.makedirs(out_dir_path)
+    
+plot_paths_data       = [f"{out_dir_path}/muon_curvature_bias_data.png",
+                         f"{out_dir_path}/uncertainty_normalized_distribution_bias_data.png"]
+plot_paths_mc         = [f"{out_dir_path}/muon_curvature_bias_mc.png",
+                         f"{out_dir_path}/uncertainty_normalized_distribution_bias_mc.png"]
+plot_path_comparison =   f"{out_dir_path}/muon_curvature_bias_comparison.png"
 h5_file = h5py.File(h5_path, "r")
 results = base_io.load_results_h5py(h5_file)
 
@@ -490,8 +506,6 @@ mc_hist_sum_Mminus     = mc_hist_sum_Mminus    [::4j,::4j,:]
 mc_hist_sum_Pplus_rec  = mc_hist_sum_Pplus_rec [::4j,::4j,:]
 mc_hist_sum_Pminus_rec = mc_hist_sum_Pminus_rec[::4j,::4j,:]
 
-title = "2016_postVFP"
-
 bias_arr_data, bias_error_arr_data, chi2_arr_data, curve_param_arr_data = compute_fit_arrays(data_hist_Mplus, data_hist_Mminus, data_hist_Pplus_rec, data_hist_Pminus_rec)
 bias_arr_mc_sum, bias_error_arr_mc_sum, chi2_arr_mc_sum, curve_param_arr_mc_sum = compute_fit_arrays(mc_hist_sum_Mplus, mc_hist_sum_Mminus, mc_hist_sum_Pplus_rec, mc_hist_sum_Pminus_rec)
 
@@ -499,12 +513,12 @@ bias_arr_mc_sum, bias_error_arr_mc_sum, chi2_arr_mc_sum, curve_param_arr_mc_sum 
 plot_bias_distributions(bias_arr_data, bias_error_arr_data, data_hist_Mplus.axes[0].edges, data_hist_Mplus.axes[1].edges, is_data=True, save_fig=True, save_paths=plot_paths_data,
                         bias_amplitude=None, bias_err_amplitude=None, extend_colorbars=[None, None, None])
 
-plot_bias_distributions(bias_arr_mc_sum, bias_error_arr_mc_sum, data_hist_Mplus.axes[0].edges, data_hist_Mplus.axes[1].edges, is_data=False, save_fig=True, save_paths=plot_paths_data,
+plot_bias_distributions(bias_arr_mc_sum, bias_error_arr_mc_sum, data_hist_Mplus.axes[0].edges, data_hist_Mplus.axes[1].edges, is_data=False, save_fig=True, save_paths=plot_paths_mc,
                         bias_amplitude=None, bias_err_amplitude=None, extend_colorbars=[None, None, None])
 
 plot_bias_comparison(bias_arr_data, bias_arr_mc_sum, data_hist_Mplus.axes[0].edges, data_hist_Mplus.axes[1].edges,
                      bias_error_arr_data, bias_error_arr_mc_sum,
-                     title=title,
+                     title=result_label,
                      title1="Data", title2="MC", title3="Difference", title4="Pull of difference",
                      cbar_label_bias="1/GeV",
                      save_fig=True, save_path=plot_path_comparison,
